@@ -37,7 +37,9 @@ public:
 	// 获取串口参数
 	DCB GetCommState(void);
 	// 设置流控
-	BOOL SetFlowCtrl(void);
+	BOOL SetFlowCtrl(BOOL val);
+	// 设置软流控
+	BOOL EnableXonAndXoff(BOOL val);
 	// 获取线路状态
 	int GetLineStatus(void);
 	// 设置DTR状态

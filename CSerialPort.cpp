@@ -1,7 +1,7 @@
-#include "pch.h"
+#include "stdafx.h"
 #include "CSerialPort.h"
 
-#define DEBUG_MODE 0
+#define DEBUG_MODE 1
 
 #if DEBUG_MODE
 // 如果不用于界面程序开发，把MessageBox更换为相应的日志输出函数即可
@@ -20,7 +20,7 @@ void CSerialPort::ShowError(DWORD dwError) // 打印显示错误信息
         NULL
     );
     // Display the string.
-    MessageBox(NULL, (LPCTSTR)lpMsgBuf, _T("Error"), MB_OK | MB_ICONINFORMATION);
+    MessageBox(NULL, (LPCTSTR)lpMsgBuf, _T("Error"), MB_OK | MB_ICONERROR);
     // Free the buffer.
     LocalFree(lpMsgBuf);
 }
@@ -162,12 +162,80 @@ DCB CSerialPort::GetCommState()
 
 // 设置硬件握手，流量控制
 // 不允许在串口打开之后还可设置
-int CSerialPort::SetFlowCtrl()
+BOOL CSerialPort::SetFlowCtrl(BOOL val)
 {
-    if (m_hComm != NULL) return FALSE;
+    BOOL bRet = FALSE;
+    if (m_hComm == NULL) return FALSE;
 
-    m_dcb.fOutxCtsFlow = TRUE;
-    m_dcb.fRtsControl = TRUE;
+    bRet = ::GetCommState(m_hComm, &m_dcb);
+    if (!bRet) {
+        if (m_hComm) {
+            CloseHandle(m_hComm);
+            m_hComm = NULL;
+        }
+        return FALSE;
+    }
+
+    if (val)
+    {
+        m_dcb.fOutxCtsFlow = TRUE;
+        m_dcb.fOutxDsrFlow = TRUE;
+        m_dcb.fRtsControl = RTS_CONTROL_ENABLE;
+        m_dcb.fDtrControl = RTS_CONTROL_ENABLE;
+    }
+    else
+    {
+        m_dcb.fOutxCtsFlow = FALSE;
+        m_dcb.fOutxDsrFlow = FALSE;
+        m_dcb.fRtsControl = RTS_CONTROL_DISABLE;
+        m_dcb.fDtrControl = DTR_CONTROL_DISABLE;
+    }
+
+    bRet = ::SetCommState(m_hComm, &m_dcb);
+    if (!bRet) {
+        if (m_hComm) {
+            ShowError(GetLastError());
+            CloseHandle(m_hComm);
+            m_hComm = NULL;
+        }
+        return FALSE;
+    }
+    return TRUE;
+}
+
+BOOL CSerialPort::EnableXonAndXoff(BOOL val)
+{
+    BOOL bRet = FALSE;
+    if (m_hComm == NULL) return FALSE;
+
+    bRet = ::GetCommState(m_hComm, &m_dcb);
+    if (!bRet) {
+        if (m_hComm) {
+            CloseHandle(m_hComm);
+            m_hComm = NULL;
+        }
+        return FALSE;
+    }
+    // 修改参数
+    if (val)
+    {
+        m_dcb.fOutX = TRUE;
+        m_dcb.fInX = TRUE;
+    }
+    else
+    {
+        m_dcb.fOutX = FALSE;
+        m_dcb.fInX = FALSE;
+    }
+    bRet = ::SetCommState(m_hComm, &m_dcb);
+    if (!bRet) {
+        if (m_hComm) {
+            ShowError(GetLastError());
+            CloseHandle(m_hComm);
+            m_hComm = NULL;
+        }
+        return FALSE;
+    }
     return TRUE;
 }
 
